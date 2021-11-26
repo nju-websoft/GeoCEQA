@@ -19,8 +19,6 @@
 - [nltk 3.4.5](https://pypi.org/project/nltk/)
 
 ## Quickstart
-unzip AEG.zip,dev.zip,test.zip,train.zip in Data/Corpus and AEG
-
 ### Extraction of AEs and Causal Relations
 
 #### Training
@@ -71,7 +69,7 @@ AEG.json will be generated in output_path
 
 ### CEQ Answering
 
-fasttext file could be download from [link](https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.zh.300.bin.gz) and put in src/4. CEQ Answering/
+fasttext file could be download from [link](https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.zh.300.bin.gz) and put in "src/4. CEQ Answering/".
 
 #### step 1: extract AEs and Causal Relations for train dev test
 
@@ -109,7 +107,9 @@ python subgraph.py "../../out/graph/" "../../out/CEQ Answering/extractions_test/
 
 #### step 4: training
 
-AEG.json and train,dev,test datset after subgraph extraction should be put in data_dir
+AEG.json and train,dev,test dataset after subgraph extraction should be put in data_dir.
+
+If you want to use AEG constructed by us and dataset prepared by us , you could unzip AEG.zip in "../../Data/Corpus and AEG" and download data_after_ppr.zip from [link](https://drive.google.com/file/d/1wd8OlpC9ifvxhGCwhd1bUTIGsPFMB4ZP/view?usp=sharing), then unzip it and put train.jsonl, dev.jsonl and test.jsonl in "../../Data/Corpus and AEG".
 
 ```bash
 python run_node_classification.py --data_dir "../../Data/Corpus and AEG" --output_dir ../../out/answerGeneration-d-b16-n --max_node_size 200 --fp16 --do_train --evaluate_during_training --overwrite_output_dir 
@@ -117,7 +117,7 @@ python run_node_classification.py --data_dir "../../Data/Corpus and AEG" --outpu
 
 #### step 5: predict
 
-model after training could be download from [link](https://drive.google.com/file/d/1-j8FvkYAUkjQccmkHChdlBbU2mjQBenG/view?usp=sharing)
+model after training could be download from [link](https://drive.google.com/file/d/1-j8FvkYAUkjQccmkHChdlBbU2mjQBenG/view?usp=sharing).
 
 ```bash
 python run_node_classification.py --data_dir "../../Data/Corpus and AEG" --output_dir ../../out/answerGeneration-d-b16-n --max_node_size 200 --fp16 --block_ngram 5 --do_eval
