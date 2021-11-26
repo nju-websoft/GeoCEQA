@@ -2,11 +2,11 @@ import os
 import sys
 import json
 import multiprocessing
-from graphBuild.Graph import EventGraph
-from answerGeneration.utils.evaluate import evalAnswer
+from Graph import EventGraph
+from utils.evaluate import evalAnswer
 import numpy as np
 
-from answerGeneration.utils.fastevent import event_similarity
+from utils.fastevent import event_similarity
 
 
 def event_sim(e1, e2, ft_weight=1):
@@ -54,11 +54,11 @@ def sorted_supp(args):
 
 def main():
     num_workers = 12
-    if __name__ == '__main__':
-        graph_root_path = '../data/answerGeneration/'
-    else:
-        graph_root_path = sys.argv[1]
-    graph_data = json.load(open(graph_root_path + 'digraph.json', encoding='UTF-8'))
+    # if __name__ == '__main__':
+    #     graph_root_path = '../data/answerGeneration/'
+    # else:
+    graph_root_path = sys.argv[1]
+    graph_data = json.load(open(graph_root_path + 'AEG.json', encoding='UTF-8'))
     graph_corefs = [cor for e_id, e in graph_data['events'].items() for cor in e['corefs']]
     for cor in graph_corefs:
         cor['id'] = cor['event_oid']
@@ -83,21 +83,23 @@ def main():
         # return str(EventGraph.getEventSlots(event))
         return event['type'], event['concept'], event['modifier'], event['predicate'], event['direction']
 
-    if __name__ == '__main__':
-        data_root_path = '../data/answerGeneration/'
-        train_path = data_root_path + 'train_pred.jsonl'
-        train_data, train_events = [], []  # load_data(train_path, prefix='train')  # train')
-        test_path = data_root_path + 'dev_pred.jsonl'  # 'dev_pred.jsonl'
-        test_data, test_events = load_data(test_path, prefix='dev')  # test')
-        coref_output_dir = "../data/eventCoref/"
-        prefix = 'dev-'
-    else:
-        data_root_path = sys.argv[2]
-        train_data, train_events = [], []
-        test_path = sys.argv[3]
-        test_data, test_events = load_data(test_path, prefix='dev')
-        coref_output_dir = sys.argv[4]
-        prefix = sys.argv[5]
+    # if __name__ == '__main__':
+    #     data_root_path = '../data/answerGeneration/'
+    #     train_path = data_root_path + 'train_pred.jsonl'
+    #     train_data, train_events = [], []  # load_data(train_path, prefix='train')  # train')
+    #     test_path = data_root_path + 'dev_pred.jsonl'  # 'dev_pred.jsonl'
+    #     test_data, test_events = load_data(test_path, prefix='dev')  # test')
+    #     coref_output_dir = "../data/eventCoref/"
+    #     prefix = 'dev-'
+    # else:
+    data_root_path = sys.argv[2]
+    train_data, train_events = [], []
+    test_path = sys.argv[3]
+    coref_output_dir = sys.argv[4]
+    prefix = sys.argv[5]
+    test_data, test_events = load_data(test_path, prefix=prefix)
+
+
 
     train_len, test_len = len(train_data), len(test_data)
     all_data = train_data + test_data
@@ -106,7 +108,8 @@ def main():
     total_events = [EventGraph.getEventSlots(e, get_id=True) for e in all_events]
     data_events_map = {e['id']: e for e in total_events}
 
-    pred_path = data_root_path + prefix + 'link_pred.csv'
+    pred_path = coref_output_dir + '_'+ prefix + '/test_results.csv'
+    print(pred_path)
     if not os.path.exists(pred_path):
         graph_feature_set = set([event_to_key(e) for e in graph_corefs])
         data_eids = [e['id'] for e in total_events if event_to_key(e) not in graph_feature_set]
@@ -114,7 +117,7 @@ def main():
         events_coref = graph_corefs + total_events
         events_coref_map = {e['id']: e for e in events_coref}
         dirname = coref_output_dir
-        json.dump(events_coref, open(dirname + prefix + 'event_link.json', 'w', encoding='UTF-8'), ensure_ascii=False)
+        json.dump(events_coref, open(dirname + '_'+ prefix + '/event_id_map.json', 'w', encoding='UTF-8'), ensure_ascii=False)
 
         attrs = ['concept', 'modifier', 'predicate', 'direction']
 
@@ -134,15 +137,15 @@ def main():
         candidates += [(j, i) for i, j in candidates]
         candidates = [','.join((i, j)) + ',norelation' for i, j in candidates]
         print('total {} pairs'.format(len(candidates)))
-        open(dirname + prefix + 'pred_link.csv', 'w', encoding='UTF-8').write('\n'.join(candidates))
+        open(dirname + '_'+ prefix + '/test.csv', 'w', encoding='UTF-8').write('\n'.join(candidates))
         print('Please run again after prediction.')
     else:
-        mapping_path = data_root_path + prefix + 'mapped_dataset.json'
+        mapping_path = coref_output_dir + '_'+ prefix + '/mapped_dataset.json'
         if not os.path.exists(mapping_path):
 
             graph_events_map = graph_data['events']
             undup_to_graph = {cor: e_id for e_id, e in graph_events_map.items() for cor in e['corefs']}
-            linking_path = data_root_path + prefix + 'linked_events.json'
+            linking_path = coref_output_dir + '_'+ prefix + '/linked_events.json'
             if not os.path.exists(linking_path):
                 relation_only_file = pred_path
                 pred_relations = [l.strip().split(',') for l in open(relation_only_file, encoding='UTF-8')]
@@ -340,7 +343,9 @@ def main():
 
             print(np.mean([len(item['answer_events']) for item in all_data]))
             # train_data, test_data = add_sim_events(train_data, test_data)
-            json.dump({'train_data': all_data[:train_len], 'test_data': all_data[train_len:]}
+            # json.dump({'train_data': all_data[:train_len], 'test_data': all_data[train_len:]}
+            #           , open(mapping_path, 'w', encoding='UTF-8'), ensure_ascii=False)
+            json.dump({prefix+'_data': all_data}
                       , open(mapping_path, 'w', encoding='UTF-8'), ensure_ascii=False)
             print('mapped dataset saved.')
 

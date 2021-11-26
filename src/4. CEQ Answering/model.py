@@ -34,9 +34,9 @@ from dgl.nn.pytorch import GraphConv
 from transformers import BertModel
 from transformers import BertPreTrainedModel
 
-from answerGeneration.gnn import HeteroGNN
-from answerGeneration.load_data import edge_types, num_class, symbols, question_aware
-from answerGeneration.decode import TransformerDecoder, NMTLoss
+from gnn import HeteroGNN
+from load_data import edge_types, num_class, symbols, question_aware
+from decode import TransformerDecoder, NMTLoss
 
 logger = logging.getLogger(__name__)
 
@@ -220,7 +220,7 @@ class BertGnnNodeClassification(BertPreTrainedModel):
         self.vocab_size = config.vocab_size
         gnn_hidden_size = 256
         self.bert_to_gnn_layer = nn.Linear(config.hidden_size, gnn_hidden_size)
-        self.gnn = HeteroGNN(in_feats=gnn_hidden_size, n_hidden=gnn_hidden_size, out_size=gnn_hidden_size, n_layers=5,
+        self.gnn = HeteroGNN(in_feats=gnn_hidden_size, n_hidden=gnn_hidden_size, out_size=gnn_hidden_size, n_layers=3,
                              etypes=edge_types, aggregator_type='mean', heads=8, relation_reducer='max',
                              # activation=F.relu,
                              dropout=config.hidden_dropout_prob)
@@ -434,7 +434,7 @@ class BertGnnNodeClassification(BertPreTrainedModel):
         if eval_mode is True:
             beam_size = 5
             max_length = 100
-            min_length = 45
+            min_length = 30
             alpha = 2
             block_ngram = args.block_ngram # 3  # best in 5
             start_token_id = symbols['BOS']

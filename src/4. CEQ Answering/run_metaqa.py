@@ -8,7 +8,7 @@ sys.argv = [
         gen_dir,
     ]
 
-from answerGeneration.subgraph import main as subgraph_main
+from subgraph import main as subgraph_main
 
 for prefix in ['1hop','2hop','3hop']:
     sys.argv = [

@@ -1,7 +1,7 @@
 import json
 import networkx as nx
 import numpy as np
-from answerGeneration.load_data import edge_types as relation_types
+from load_data import edge_types as relation_types
 
 import logging
 
@@ -200,7 +200,7 @@ exit()
 # results = sorted([v for k, v in results.items()], key=lambda x: x[1], reverse=True)
 
 
-graph_data = json.load(open(root_path + 'digraph.json', encoding='UTF-8'))
+graph_data = json.load(open(root_path + 'AEG.json', encoding='UTF-8'))
 etype_count = {}
 
 edges_set = set()

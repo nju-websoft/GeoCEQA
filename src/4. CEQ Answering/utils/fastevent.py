@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 import scipy.spatial.distance as distance
-from graphBuild.Graph import EventGraph
+from Graph import EventGraph
 
 if len(sys.argv) > 2 and sys.argv[2].endswith('hop'):
     pass

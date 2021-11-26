@@ -65,20 +65,26 @@ class InputFeatures(object):
         self.question_length = question_length
 
 
-def read_examples_from_file(data_dir, mode):
-    file_path = os.path.join(data_dir, "{}.jsonl".format(mode))
+def read_examples_from_file(filename,mode):
+    # file_path = os.path.join(data_dir, "{}.jsonl".format(mode))
     guid_index = 1
     examples = []
 
-    with open(file_path, encoding="utf-8") as f:
+    with open(filename, encoding="utf-8") as f:
         # words = []
         # labels = []
         for line in f:
             item = json.loads(line)
             question = item['question']
             answer = item['answer']
-            question_events = item['question_events']
-            answer_events = item['answer_events']
+            if 'question_events' in item:
+                question_events = item['question_events']
+            else:
+                question_events = []
+            if 'answer_events' in item:
+                answer_events = item['answer_events']
+            else:
+                answer_events =[]
             # rel_span, rel_labels = toRelations(question_events, answer_events, item['relations'],
             #                                    len(question), len(question) + len(answer))
             examples.append(InputExample(guid="{}-{}".format(mode, guid_index),
@@ -86,7 +92,7 @@ def read_examples_from_file(data_dir, mode):
                                          answer=answer,
                                          question_events=question_events,
                                          answer_events=answer_events,
-                                         relations=item['relations'],
+                                         relations=item['relations'] if 'relations' in item else [],
                                          # rel_span=rel_span,
                                          # rel_labels=rel_labels
                                          )),

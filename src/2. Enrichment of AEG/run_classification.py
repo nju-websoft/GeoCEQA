@@ -90,17 +90,22 @@ class CorefProcessor(DataProcessor):
 
     def get_dev_examples(self, data_dir):
         """See base class."""
-        return self._create_examples(
-            [l.strip().split(',') for l in
-             open(os.path.join(data_dir, "pred.csv"), encoding='UTF-8')], "pred", data_dir)
+        data=[l.strip().split(',') for l in
+             open(os.path.join(data_dir, "test.csv"), encoding='UTF-8')]
+        print("data:",len(data))
+        examples = self._create_examples(
+            data, "pred", data_dir)
+        print("example:",len(examples))
+        return examples
 
     def get_labels(self):
         """See base class."""
         return ['contrary', 'coreference', 'norelation', 'related']
 
     def _create_examples(self, lines, set_type, data_dir):
+
         """Creates examples for the training and dev sets."""
-        events = json.load(open(os.path.join(data_dir, 'events.json'), encoding='UTF-8'))
+        events = json.load(open(os.path.join(data_dir, 'event_id_map.json'), encoding='UTF-8'))
         event_map = {e['id']: e for e in events}
 
         def id2feature(event_id):
@@ -346,12 +351,16 @@ def evaluate(args, model, tokenizer, labels, prefix="", during_train=False):
                 writer.write("%s = %s\n" % (key, str(result[key])))
 
         if not during_train:
-            output_pred_file = os.path.join(eval_output_dir, prefix, "pred_results.csv")
-            prefix = [l.strip().split(',')[:2] for l in open(os.path.join(args.data_dir, "pred.csv"), encoding='UTF-8')]
+            output_pred_file = os.path.join(eval_output_dir, prefix, "test_results.csv")
+            prefix = [l.strip().split(',')[:2] for l in open(os.path.join(args.data_dir, "test.csv"), encoding='UTF-8')]
             with open(output_pred_file, "w", encoding='UTF-8') as writer:
-                writer.write(
-                    '\n'.join([','.join((prefix[i][0], prefix[i][1], labels[p]))
-                               for i, p in enumerate(preds) if labels[p] != 'norelation']))
+                for i, p in enumerate(preds):
+                    if labels[p] != 'norelation':
+                        writer.write(','.join((prefix[i][0], prefix[i][1], labels[p])))
+
+                # writer.write(
+                #     '\n'.join([','.join((prefix[i][0], prefix[i][1], labels[p]))
+                #                for i, p in enumerate(preds) if labels[p] != 'norelation']))
 
     return results
 
@@ -391,7 +400,6 @@ def load_and_cache_examples(args, task, tokenizer, evaluate=False):
             label_list[1], label_list[2] = label_list[2], label_list[1]
         examples = processor.get_dev_examples(args.data_dir) if evaluate else processor.get_train_examples(
             args.data_dir)
-
         global wrapper_dict
         wrapper_dict = {'tokenizer': tokenizer, 'label_list': label_list, 'max_length': args.max_seq_length,
                         'output_mode': output_mode, 'pad_on_left': False,

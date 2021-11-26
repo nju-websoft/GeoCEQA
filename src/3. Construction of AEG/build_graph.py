@@ -1,16 +1,26 @@
 import os
-from graphBuild.Graph import EventGraph
+from Graph import EventGraph
+import argparse
+parser = argparse.ArgumentParser()
 
-root_path = '../data/graph/'
-graph = EventGraph(root_path + 'corpus_pred.jsonl')
+## Required parameters
+parser.add_argument("--input_path", default=None, type=str, required=True,
+                    help="The input data dir. Should contain the .tsv files (or other data files) for the task.")
+parser.add_argument("--output_path", default=None, type=str, required=True,
+                    help="The output directory where the model predictions and checkpoints will be written.")
+args = parser.parse_args()
+root_path = args.input_path
+graph = EventGraph(root_path + 'Corpus_pred.jsonl')
 graph.process_equal()
-coref_file = root_path + 'corpus_coref_pred.csv'
+coref_file = root_path + 'test_results.csv'
+print(coref_file)
 if not os.path.exists(coref_file):
-    dirname = '../data/eventCoref/'
-    graph.generate_coref_candidate(event_file=dirname + 'event_corpus.json',
-                                   candidate_file=dirname + 'pred_corpus.csv')
+    dirname = args.output_path
+    graph.generate_coref_candidate(event_file=dirname + 'event_id_map.json',
+                                   candidate_file=dirname + 'test.csv')
     print('Please run again after prediction.')
 else:
+    print("building graph")
     relation_only_file = coref_file
     # relation_only_file = root_path + 'relations_only.csv'
     # if not os.path.exists(relation_only_file):
@@ -21,4 +31,4 @@ else:
 
     relations = sorted(graph.relation_list, key=lambda x: x['count'], reverse=True)
     # graph.save(root_path + 'graph.json')
-    graph.to_digraph(root_path + 'digraph.json')
+    graph.to_digraph(args.output_path + 'AEG.json')

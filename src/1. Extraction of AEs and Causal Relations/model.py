@@ -127,7 +127,8 @@ class BertForBinaryTokenClassification(BertPreTrainedModel):
                 position_ids=None, head_mask=None, inputs_embeds=None, span_labels=None,
                 span_size=None, span_list=None, slot_labels=None, slot_mask=None, rel_size=None, rel_list=None,
                 question_length=None, binary_span=None, span_null_label_id=0):
-
+        # print(input_ids,attention_mask,token_type_ids,position_ids,head_mask,inputs_embeds)
+        # print(self.device)
         outputs = self.bert(input_ids,
                             attention_mask=attention_mask,
                             token_type_ids=token_type_ids,

@@ -1,7 +1,7 @@
 import json
 import sys
-from graphBuild.Graph import EventGraph
-from answerGeneration.utils.evaluate import evalAnswer
+from Graph import EventGraph
+from utils.evaluate import evalAnswer
 import numpy as np
 import networkx as nx
 
@@ -48,30 +48,31 @@ def subgraph_wrapper(args):
 
 
 def main():
-    if __name__ == "__main__":
-        root_path = '../data/answerGeneration/'
-        prefix = 'ocsl-dev-'
-    else:
-        root_path = sys.argv[1]
-        prefix = sys.argv[2]
-    graph_data = json.load(open(root_path + 'digraph.json'), encoding='UTF-8')
-    if prefix.endswith('hop_'):
-        node_name = 'nodes'
-        qnode_name = 'question_nodes'
-        anode_name = 'answer_nodes'
-    else:
-        node_name = 'events'
-        qnode_name = 'question_events'
-        anode_name = 'answer_events'
-        relation_types = ['qa_cause', 'answer_cause', 'r_qa_cause', 'r_answer_cause',
-                          # 'coreference',
-                          # 'related', 'contrary', 'context'
-                          ]
-        graph_corefs = [cor for e_id, e in graph_data['events'].items() for cor in e['corefs']]
-        for cor in graph_corefs:
-            cor['id'] = cor['event_oid']
-        for e_id, e in graph_data['events'].items():
-            e['corefs'] = [cor['event_oid'] for cor in e['corefs']]
+    # if __name__ == "__main__":
+    #     root_path = '../data/answerGeneration/'
+    #     prefix = 'ocsl-dev-'
+    # else:
+    graph_path = sys.argv[1]
+    data_path = sys.argv[2]
+    out_path = sys.argv[3]
+    graph_data = json.load(open(graph_path + 'AEG.json'), encoding='UTF-8')
+    # if prefix.endswith('hop_'):
+    #     node_name = 'nodes'
+    #     qnode_name = 'question_nodes'
+    #     anode_name = 'answer_nodes'
+    # else:
+    node_name = 'events'
+    qnode_name = 'question_events'
+    anode_name = 'answer_events'
+    relation_types = ['qa_cause', 'answer_cause', 'r_qa_cause', 'r_answer_cause',
+                      # 'coreference',
+                      # 'related', 'contrary', 'context'
+                      ]
+    graph_corefs = [cor for e_id, e in graph_data['events'].items() for cor in e['corefs']]
+    for cor in graph_corefs:
+        cor['id'] = cor['event_oid']
+    for e_id, e in graph_data['events'].items():
+        e['corefs'] = [cor['event_oid'] for cor in e['corefs']]
 
     # def load_data(filename, prefix):
     #     dataset = [json.loads(line) for line in open(filename, encoding='UTF-8')]
@@ -100,10 +101,10 @@ def main():
 
     only_causal = False
 
-    all_data = json.load(open(root_path + prefix + 'mapped_dataset.json', encoding='UTF-8'))
-    train_data = all_data['train_data']
+    all_data = json.load(open(data_path + 'mapped_dataset.json', encoding='UTF-8'))
+    train_data = all_data['train_data'] if 'train_data' in all_data else []
     dev_data = all_data['dev_data'] if 'dev_data' in all_data else []
-    test_data = all_data['test_data']
+    test_data = all_data['test_data'] if 'test_data' in all_data else []
 
     # open(root_path + 'train.jsonl', 'w').write('\n'.join([json.dumps(item, ensure_ascii=False) for item in train_data]))
     # open(root_path + 'test.jsonl', 'w').write('\n'.join([json.dumps(item, ensure_ascii=False) for item in test_data]))
@@ -157,15 +158,18 @@ def main():
             #     test_path = root_path + 'test_{}_{}.jsonl'.format(method, size)
             #     open(test_path, 'w').write('\n'.join([json.dumps(l, ensure_ascii=False) for l in test_data]))
             if size is None:
-                train_path = root_path + prefix + 'train_{}_all.jsonl'.format(method)
-                open(train_path, 'w', encoding='UTF-8').write(
-                    '\n'.join([json.dumps(l, ensure_ascii=False) for l in train_data]))
-                train_path = root_path + prefix + 'valid_{}_all.jsonl'.format(method)
-                open(train_path, 'w', encoding='UTF-8').write(
-                    '\n'.join([json.dumps(l, ensure_ascii=False) for l in dev_data]))
-                test_path = root_path + prefix + 'test_{}_all.jsonl'.format(method)
-                open(test_path, 'w', encoding='UTF-8').write(
-                    '\n'.join([json.dumps(l, ensure_ascii=False) for l in test_data]))
+                if len(train_data):
+                    train_path = out_path + 'train.jsonl'
+                    open(train_path, 'w', encoding='UTF-8').write(
+                        '\n'.join([json.dumps(l, ensure_ascii=False) for l in train_data]))
+                if len(dev_data):
+                    train_path = out_path+ 'valid.jsonl'
+                    open(train_path, 'w', encoding='UTF-8').write(
+                        '\n'.join([json.dumps(l, ensure_ascii=False) for l in dev_data]))
+                if len(test_data):
+                    test_path = out_path + 'test.jsonl'
+                    open(test_path, 'w', encoding='UTF-8').write(
+                        '\n'.join([json.dumps(l, ensure_ascii=False) for l in test_data]))
             print(size, rate)  # , scores)
 
 

@@ -59,10 +59,10 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 from sklearn.metrics import f1_score, ndcg_score
 
 if __name__ == "__main__":
-    from answerGeneration.load_data import AnsGenProcessor, convert_examples_to_features, \
+    from load_data import AnsGenProcessor, convert_examples_to_features, \
         GraphDataset, num_class, only_causal, question_aware
-    from answerGeneration.model import BertGnnNodeClassification
-    from answerGeneration.utils.evaluate import evalAnswer
+    from model import BertGnnNodeClassification
+    from utils.evaluate import evalAnswer
 else:
     from .load_data import AnsGenProcessor, convert_examples_to_features, \
         GraphDataset, num_class, only_causal, question_aware
@@ -294,6 +294,7 @@ def evaluate(args, model, tokenizer, labels, prefix="", during_train=False):
     node_preds = []
     node_label_ids = []
     instance_pred_rank = []
+    all_instance_pred_rank=[]
     instance_labels = []
     instance_plabels = []
     instance_rlabels = []
@@ -330,8 +331,10 @@ def evaluate(args, model, tokenizer, labels, prefix="", during_train=False):
         for i, ns in enumerate(tensor_graph.batch_num_nodes('event')):
             if not question_aware:
                 ns -= 1
-            if ns == 1: continue
             sort_scores = sorted([(i, s) for i, s in enumerate(scores[:ns])], key=lambda x: x[1], reverse=True)
+            all_instance_pred_rank.append([(node_index[i][str(j)], p) for j, p in sort_scores] if ns!=1 else [])
+            if ns == 1: continue
+
             instance_pred_rank.append([(node_index[i][str(j)], p) for j, p in sort_scores])
             if num_class == 2:
                 instance_labels.append([node_index[i][str(j)] for j, p in enumerate(out_label_ids[:ns]) if p == 1])
@@ -350,7 +353,7 @@ def evaluate(args, model, tokenizer, labels, prefix="", during_train=False):
     results.update(result)
     results['eval_loss'] = eval_loss
 
-    answer_concat = AnsGenProcessor.index_to_text([[i for i, s in ins[:20]] for ins in instance_pred_rank])
+    answer_concat = AnsGenProcessor.index_to_text([[i for i, s in ins[:20]] for ins in all_instance_pred_rank])
     output_text = list(map(list, zip(question, answer_concat, gold_answer)))
     rouge_score = evalAnswer(answer_concat, gold_answer, max_len=60,
                              metrics=(('rouge-1', 'f'), ('rouge-2', 'f'), ('rouge-l', 'f')))

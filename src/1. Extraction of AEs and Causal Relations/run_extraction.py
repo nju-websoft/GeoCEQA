@@ -171,7 +171,7 @@ def train(args, train_dataset, model, tokenizer, labels, pad_token_label_id):
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     # Log metrics
                     if args.local_rank == -1 and args.evaluate_during_training:  # Only evaluate when single GPU otherwise metrics may not average well
-                        results, _ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="dev")
+                        results, _ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test",filename= os.path.join(args.data_dir, "{}.jsonl".format("test")))
                         for key, value in results.items():
                             tb_writer.add_scalar("eval_{}".format(key), value, global_step)
                     tb_writer.add_scalar("lr", scheduler.get_lr()[0], global_step)
@@ -202,8 +202,8 @@ def train(args, train_dataset, model, tokenizer, labels, pad_token_label_id):
     return global_step, tr_loss / global_step
 
 
-def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""):
-    eval_dataset = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode=mode)
+def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, filename,prefix=""):
+    eval_dataset = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode=mode,filename=filename)
 
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
     # Note that DistributedSampler samples randomly
@@ -465,7 +465,7 @@ def evaluate(args, model, tokenizer, labels, pad_token_label_id, mode, prefix=""
     return results, (span_preds, items_preds, rel_spans)
 
 
-def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode):
+def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode,filename):
     if args.local_rank not in [-1, 0] and not evaluate:
         torch.distributed.barrier()  # Make sure only the first process in distributed training process the dataset, and the others will use the cache
 
@@ -481,7 +481,7 @@ def load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode):
         features = torch.load(cached_features_file)
     else:
         logger.info("Creating features from dataset file at %s", args.data_dir)
-        examples = read_examples_from_file(args.data_dir, mode)
+        examples = read_examples_from_file(filename,mode)
         features = convert_examples_to_features(examples, labels, args.max_seq_length, tokenizer,
                                                 cls_token_at_end=bool(args.model_type in ["xlnet"]),
                                                 # xlnet has a cls token at the end
@@ -624,7 +624,7 @@ def main():
     if args.do_predict:
         if len(args.predict_file) == 0:
             raise ValueError("Mode predict need predict file name.")
-        os.system('cp {} {}'.format(args.predict_file, os.path.join(args.data_dir, 'test.jsonl')))
+        # os.system('cp {} {}'.format(args.predict_file, os.path.join(args.data_dir, 'test.jsonl')))
         test_file_name = args.predict_file
         test_file_name = test_file_name[test_file_name.rfind('/') + 1:] if '/' in test_file_name else test_file_name
         test_file_name = test_file_name[:test_file_name.rfind('.')]
@@ -692,7 +692,7 @@ def main():
 
     # Training
     if args.do_train:
-        train_dataset = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode="train")
+        train_dataset = load_and_cache_examples(args, tokenizer, labels, pad_token_label_id, mode="train",filename= os.path.join(args.data_dir, "{}.jsonl".format("train")))
         global_step, tr_loss = train(args, train_dataset, model, tokenizer, labels, pad_token_label_id)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
@@ -727,7 +727,7 @@ def main():
             global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
             model = model_class.from_pretrained(checkpoint)
             model.to(args.device)
-            result, _ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="dev", prefix=global_step)
+            result, _ = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test",filename=os.path.join(args.data_dir, "{}.jsonl".format("test")), prefix=global_step)
             if global_step:
                 result = {"{}_{}".format(global_step, k): v for k, v in result.items()}
             results.update(result)
@@ -740,7 +740,7 @@ def main():
         tokenizer = tokenizer_class.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
         model = model_class.from_pretrained(args.output_dir)
         model.to(args.device)
-        result, predictions = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test")
+        result, predictions = evaluate(args, model, tokenizer, labels, pad_token_label_id, mode="test",filename=args.predict_file)
         # Save results
         output_dir = args.pred_dir if args.pred_dir else args.output_dir
         if not os.path.exists(output_dir):
@@ -752,12 +752,13 @@ def main():
         # Save predictions
         span_list, slot_list, rel_list = predictions
         output_test_predictions_file = os.path.join(output_dir, "{}_pred.jsonl".format(args.test_file_name))
-        test_file = os.path.join(args.data_dir, "test.jsonl")
+        # test_file = os.path.join(args.data_dir, "test.jsonl")
+        test_file = args.predict_file
         with open(output_test_predictions_file, "w", encoding='UTF-8') as writer:
             import json
             label_maps = [{i: l for i, l in enumerate(label)} for label in labels]
 
-            def slots2events(id_, slots, ques_length):
+            def slots2events(id_, slots, ques_length,ques,answ):
                 ques_events = []
                 answ_events = []
                 event_map = {}
@@ -783,6 +784,7 @@ def main():
                             event[slot_name] = slot_map[slot_name]
                         else:
                             event[slot_name] = None
+                    event["span"]=ques[s[2] + offset:s[3] + offset] if s[2] < ques_length else answ[s[2] + offset:s[3] + offset]
                     if offset == 0:
                         ques_events.append(event)
                     else:
@@ -812,14 +814,14 @@ def main():
                         slots = slot_list[example_id]
                         rels = rel_list[example_id]
                         assert len(spans) == len(slots)
-                        ques_events, answ_events, event_map = slots2events(id_, slots, len(ques))
+                        ques_events, answ_events, event_map = slots2events(id_, slots, len(ques),ques,answ)
                         relations = rels2relations(rels, event_map)
                         writer.write(json.dumps({'id': id_, 'question': ques, 'answer': answ,
                                                  'question_events': ques_events, 'answer_events': answ_events,
                                                  'relations': relations}, ensure_ascii=False) + '\n')
                         example_id += 1
 
-        os.system('rm {}'.format(test_file))
+        # os.system('rm {}'.format(test_file))
 
     return results
 

@@ -8,7 +8,7 @@ import networkx as nx
 from torch.utils.data import Dataset
 from transformers import DataProcessor, InputExample
 from transformers import glue_convert_examples_to_features
-from graphBuild.Graph import EventGraph
+from Graph import EventGraph
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,7 @@ class AnsGenProcessor(DataProcessor):
     """Processor for the event coreference data set."""
 
     def __init__(self, data_dir):
-        graph_data = json.load(open(os.path.join(data_dir, 'digraph.json'), encoding='UTF-8'))
+        graph_data = json.load(open(os.path.join(data_dir, 'AEG.json'), encoding='UTF-8'))
         event_map = graph_data['events']
         line_map = graph_data['relations']
         for k, v in event_map.items():
